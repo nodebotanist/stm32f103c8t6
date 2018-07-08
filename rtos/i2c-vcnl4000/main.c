@@ -84,17 +84,15 @@ static void uart_setup(void) {
 }
 
 /*
-			i2c_start_addr(&i2c,addr,Write);
-			i2c_write(&i2c,value&0x0FF);
-			i2c_stop(&i2c);
+READ: i2c_start_addr -> i2c_write_restart -> i2c_stop
 
-			i2c_start_addr(&i2c,addr,Read);
-			byte = i2c_read(&i2c,true);
-			i2c_stop(&i2c);
+WRITE i2c_start_addr -> i2c_write(address) -> 
+  i2c_write(data)* -> i2c_stop()
 */
 uint8_t currentReadByte;
+uint16_t measurement;
 bool waitForProx = true;
-char printByte[24];
+char printByte[32];
 static void readProx() {
   for(;;) {
     uart_puts("Starting sensor read!\r\n");
@@ -112,20 +110,19 @@ static void readProx() {
     }
 
     i2c_start_addr(&i2c,VCNL4000_ADDRESS,Write);
-    i2c_write_restart(&i2c,VCNL4000_IRLED,VCNL4000_ADDRESS);
-    i2c_write(&i2c, 0x00);
+    i2c_write(&i2c,VCNL4000_IRLED);
     i2c_write(&i2c, 0x14);
     i2c_stop(&i2c);    
     uart_puts("Set IR LED current to 200mA\r\n");
 
     i2c_start_addr(&i2c,VCNL4000_ADDRESS,Write);
-    i2c_write_restart(&i2c,VCNL4000_PROXINITYADJUST,VCNL4000_ADDRESS);
+    i2c_write(&i2c,VCNL4000_PROXINITYADJUST);
     i2c_write(&i2c, 0x81);
     i2c_stop(&i2c);    
     uart_puts("Set Proximity adjustment register to 0x81\r\n");
 
     i2c_start_addr(&i2c,VCNL4000_ADDRESS,Write);
-    i2c_write_restart(&i2c,VCNL4000_COMMAND,VCNL4000_ADDRESS);
+    i2c_write(&i2c,VCNL4000_COMMAND);
     i2c_write(&i2c, VCNL4000_MEASUREPROXIMITY);
     i2c_stop(&i2c);    
     uart_puts("Set Command to measure proximity\r\n");
@@ -147,9 +144,13 @@ static void readProx() {
 
     uart_puts("Prox data ready!");
 
-
-  //     return read16(VCNL4000_PROXIMITYDATA);
-
+    i2c_start_addr(&i2c, VCNL4000_ADDRESS, Write);
+    i2c_write_restart(&i2c, VCNL4000_PROXIMITYDATA, VCNL4000_ADDRESS);
+    currentReadByte = i2c_read(&i2c,false);
+    measurement |= currentReadByte << 8;
+    currentReadByte = i2c_read(&i2c,true);
+    i2c_stop(&i2c);
+    measurement |= currentReadByte;
 
     vTaskDelay(pdMS_TO_TICKS(1000));
   }

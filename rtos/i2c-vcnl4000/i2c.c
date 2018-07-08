@@ -150,6 +150,14 @@ i2c_write(I2C_Control *dev,uint8_t byte) {
 }
 
 /*********************************************************************
+ * Write multiple bytes of data
+ *********************************************************************/
+
+void i2c_write_multi(I2C_Control *dev, uint8_t bytes[]) {
+
+}
+
+/*********************************************************************
  * Read one byte of data. Set lastf=true, if this is the last/only
  * byte being read.
  *********************************************************************/
